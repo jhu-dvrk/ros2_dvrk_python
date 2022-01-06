@@ -19,23 +19,18 @@
 # To communicate with the arm using ROS topics, see the python based example dvrk_arm_test.py:
 # > rosrun dvrk_python dvrk_arm_test.py <arm-name>
 
-import dvrk
-import math
+import argparse
 import sys
 import time
-import rospy
+import threading
+import rclpy
+import dvrk
+import math
 import numpy
 import PyKDL
-import argparse
-
-if sys.version_info.major < 3:
-    input = raw_input
 
 # ros init node so we can use default ros arguments (e.g. __ns:= for namespace)
-rospy.init_node('dvrk_move_wait_test', anonymous = True)
-
-# strip ros arguments
-argv = rospy.myargv(argv=sys.argv)
+rclpy.init(args = sys.argv)
 
 # parse arguments
 parser = argparse.ArgumentParser()
@@ -44,10 +39,18 @@ parser.add_argument('-a', '--arm', type=str, required=True,
                     help = 'arm name corresponding to ROS topics without namespace.  Use __ns:= to specify the namespace')
 parser.add_argument('-i', '--interval', type=float, default=0.01,
                     help = 'expected interval in seconds between messages sent by the device')
-args = parser.parse_args(argv[1:]) # skip argv[0], script name
+args = parser.parse_args(sys.argv[1:]) # skip argv[0], script name
 
-arm = dvrk.arm(arm_name = args.arm,
+node = rclpy.create_node('dvrk_move_wait_test', namespace = args.arm)
+
+arm = dvrk.arm(arm_name = node.get_namespace(),
+               ros_node = node,
                expected_interval = args.interval)
+
+executor = rclpy.executors.MultiThreadedExecutor()
+executor.add_node(node)
+executor_thread = threading.Thread(target = executor.spin, daemon = True)
+executor_thread.start()
 
 print('starting move_jp')
 
@@ -105,3 +108,8 @@ print('')
 print('--> Time for the full trajectory: %f seconds' % (time.time() - start_time))
 
 print('--> You can change the trajectory velocity in the GUI using "%s", "Direct control" and lower the "100%%" factor.  Then re-run this program.' % (args.arm))
+
+print('---> Stopping ROS thread')
+rclpy.shutdown()
+executor_thread.join()
+node.destroy_node()
