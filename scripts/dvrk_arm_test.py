@@ -252,9 +252,6 @@ if __name__ == '__main__':
     # ros init node so we can use default ros arguments (e.g. __ns:= for namespace)
     rclpy.init(args = sys.argv)
 
-    # strip ros arguments
-    # argv = rclpy.myargv(argv=sys.argv)
-
     # parse arguments
     parser = argparse.ArgumentParser()
     parser.add_argument('-a', '--arm', type=str, required=True,

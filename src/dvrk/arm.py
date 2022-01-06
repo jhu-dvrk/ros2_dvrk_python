@@ -51,7 +51,8 @@ class arm(object):
             self.__crtk_utils.add_setpoint_cp(ros_sub_namespace)
 
     # initialize the arm
-    def __init__(self, arm_name, ros_node = None,
+    def __init__(self, arm_name,
+                 ros_node = None,
                  expected_interval = 0.01):
         # base class constructor in separate method so it can be called in derived classes
         self.__init_arm(arm_name, ros_node, expected_interval)
