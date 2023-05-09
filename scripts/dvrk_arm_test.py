@@ -3,7 +3,7 @@
 # Author: Anton Deguet
 # Date: 2015-02-22
 
-# (C) Copyright 2015-2022 Johns Hopkins University (JHU), All Rights Reserved.
+# (C) Copyright 2015-2023 Johns Hopkins University (JHU), All Rights Reserved.
 
 # --- begin cisst license - do not edit ---
 
@@ -22,8 +22,7 @@
 import argparse
 import sys
 import time
-import threading
-import rclpy
+import crtk
 import dvrk
 import math
 import numpy
@@ -33,11 +32,12 @@ import PyKDL
 class example_application:
 
     # configuration
-    def configure(self, node, expected_interval):
-        print('configuring dvrk_arm_test for node %s using namespace %s' % (node.get_name(), node.get_namespace()))
+    def __init__(self, ros_12, expected_interval):
+        print('configuring dvrk_arm_test for node %s using namespace %s' % (ros_12.node_name(), ros_12.namespace()))
+        self.ros_12 = ros_12
         self.expected_interval = expected_interval
-        self.arm = dvrk.arm(arm_name = node.get_namespace(),
-                            ros_node = node,
+        self.arm = dvrk.arm(arm_name = ros_12.namespace(),
+                            ros_node = ros_12.node(),
                             expected_interval = expected_interval)
 
     # homing example
@@ -111,15 +111,12 @@ class example_application:
         # create a new goal starting with current position
         goal = numpy.copy(initial_joint_position)
         start = time.time()
+        self.ros_12.set_rate(1.0 / self.expected_interval)
         for i in range(int(samples)):
-            tic = time.time()
             goal[0] = initial_joint_position[0] + amplitude *  (1.0 - math.cos(i * math.radians(360.0) / samples))
             goal[1] = initial_joint_position[1] + amplitude *  (1.0 - math.cos(i * math.radians(360.0) / samples))
             self.arm.servo_jp(goal)
-            dt = time.time() - tic
-            time_left = self.expected_interval - dt
-            if time_left > 0:
-                time.sleep(time_left)
+            self.ros_12.sleep()
         actual_duration = time.time() - start
         print('servo_jp complete in %2.2f seconds (expected %2.2f)' % (actual_duration, duration))
 
@@ -175,8 +172,8 @@ class example_application:
         duration = 5  # 5 seconds
         samples = duration / self.expected_interval
         start = time.time()
+        self.ros_12.set_rate(1.0 / self.expected_interval)
         for i in range(int(samples)):
-            tic = time.time()
             goal.p[0] =  initial_cartesian_position.p[0] + amplitude *  (1.0 - math.cos(i * math.radians(360.0) / samples))
             goal.p[1] =  initial_cartesian_position.p[1] + amplitude *  (1.0 - math.cos(i * math.radians(360.0) / samples))
             self.arm.servo_cp(goal)
@@ -190,10 +187,7 @@ class example_application:
             error = math.sqrt(errorX * errorX + errorY * errorY + errorZ * errorZ)
             if error > 0.002: # 2 mm
                 print('Inverse kinematic error in position [%i]: %s (might be due to latency)' % (i, error))
-            dt = time.time() - tic
-            time_left = self.expected_interval - dt
-            if time_left > 0:
-                time.sleep(time_left)
+            self.ros_12.sleep()
         actual_duration = time.time() - start
         print('servo_cp complete in %2.2f seconds (expected %2.2f)' % (actual_duration, duration))
 
@@ -250,7 +244,7 @@ class example_application:
 
 if __name__ == '__main__':
     # ros init node so we can use default ros arguments (e.g. __ns:= for namespace)
-    rclpy.init(args = sys.argv)
+    argv = crtk.ros_12.parse_argv(sys.argv)
 
     # parse arguments
     parser = argparse.ArgumentParser()
@@ -259,23 +253,9 @@ if __name__ == '__main__':
                         help = 'arm name corresponding to ROS topics without namespace.  Use __ns:= to specify the namespace')
     parser.add_argument('-i', '--interval', type=float, default=0.01,
                         help = 'expected interval in seconds between messages sent by the device')
-    args = parser.parse_args(sys.argv[1:]) # skip argv[0], script name
+    args = parser.parse_args(argv[1:]) # skip argv[0], script name
 
-    node = rclpy.create_node('dvrk_arm_test', namespace = args.arm)
-    application = example_application()
-    application.configure(node, args.interval)
-
-    executor = rclpy.executors.MultiThreadedExecutor()
-    executor.add_node(node)
-    executor_thread = threading.Thread(target = executor.spin, daemon = True)
-    executor_thread.start()
-
-    try:
-        application.run()
-    except KeyboardInterrupt:
-        pass
-
-    print('stopping ROS thread')
-    rclpy.shutdown()
-    executor_thread.join()
-    node.destroy_node()
+    # ROS 1 or 2 wrapper
+    ros_12 = crtk.ros_12('dvrk_arm_test', args.arm)
+    application = example_application(ros_12, args.interval)
+    ros_12.spin_and_execute(application.run)
