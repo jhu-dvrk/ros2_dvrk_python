@@ -83,6 +83,7 @@ class arm(object):
         self.__crtk_utils.add_measured_js()
         self.__crtk_utils.add_measured_cp()
         self.__crtk_utils.add_measured_cv()
+        self.__crtk_utils.add_hold()
         self.__crtk_utils.add_servo_jp()
         self.__crtk_utils.add_servo_jr()
         self.__crtk_utils.add_servo_cp()
@@ -90,6 +91,8 @@ class arm(object):
         self.__crtk_utils.add_move_jp()
         self.__crtk_utils.add_move_jr()
         self.__crtk_utils.add_move_cp()
+        self.__crtk_utils.add_forward_kinematics()
+        self.__crtk_utils.add_inverse_kinematics()
 
         self.spatial = self.__MeasuredServoCf(self.__ros_node, 'spatial/', expected_interval)
         self.body = self.__MeasuredServoCf(self.__ros_node, 'body/', expected_interval)
