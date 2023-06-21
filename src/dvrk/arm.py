@@ -52,7 +52,7 @@ class arm(object):
 
     # initialize the arm
     def __init__(self, arm_name,
-                 ros_node = None,
+                 ros_node,
                  expected_interval = 0.01):
         # base class constructor in separate method so it can be called in derived classes
         self.__init_arm(arm_name, ros_node, expected_interval)
@@ -66,12 +66,7 @@ class arm(object):
         `PSM1`"""
         # data members
         self.__arm_name = arm_name
-        if ros_node == None:
-            self.__ros_node = rclpy.create_node('dVRK_' + arm_name,
-                                                namespace = arm_name)
-        else:
-            self.__ros_node = ros_node
-
+        self.__ros_node = ros_node
 
         # crtk features
         self.__crtk_utils = crtk.utils(self, self.__ros_node, expected_interval)

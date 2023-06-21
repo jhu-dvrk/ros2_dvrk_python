@@ -1,7 +1,7 @@
 #  Author(s):  Anton Deguet
 #  Created on: 2016-05
 
-#   (C) Copyright 2016-2022 Johns Hopkins University (JHU), All Rights Reserved.
+#   (C) Copyright 2016-2023 Johns Hopkins University (JHU), All Rights Reserved.
 
 # --- begin cisst license - do not edit ---
 
@@ -26,7 +26,7 @@ class mtm(arm):
             self.__crtk_utils.add_measured_js(ros_sub_namespace)
 
     # initialize the robot
-    def __init__(self, arm_name, ros_node = None,
+    def __init__(self, arm_name, ros_node,
                  expected_interval = 0.01):
         # first call base class constructor
         self._arm__init_arm(arm_name, ros_node, expected_interval)
