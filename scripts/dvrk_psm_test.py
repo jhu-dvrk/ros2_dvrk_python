@@ -15,8 +15,7 @@
 
 # Start a single arm using
 # > ros2 run dvrk_robot dvrk_console_json -j <console-file>
-
-# To communicate with the arm using ROS topics, see the python based example dvrk_arm_test.py:
+# Run test script:
 # > ros2 run dvrk_python dvrk_arm_test.py <arm-name>
 
 import argparse
@@ -171,7 +170,7 @@ class example_application:
 
 if __name__ == '__main__':
     # strip ros arguments
-    argv = crtk.ral.parse_argv(sys.argv)
+    argv = crtk.ral.parse_argv(sys.argv[1:]) # skip argv[0], script name
 
     # parse arguments
     parser = argparse.ArgumentParser()
@@ -180,7 +179,7 @@ if __name__ == '__main__':
                         help = 'arm name corresponding to ROS topics without namespace.  Use __ns:= to specify the namespace')
     parser.add_argument('-i', '--interval', type=float, default=0.01,
                         help = 'expected interval in seconds between messages sent by the device')
-    args = parser.parse_args(sys.argv[1:]) # skip argv[0], script name
+    args = parser.parse_args(argv)
 
     ral = crtk.ral('dvrk_psm_test')
     application = example_application(ral, args.arm, args.interval)

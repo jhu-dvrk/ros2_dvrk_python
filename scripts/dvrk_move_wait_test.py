@@ -15,8 +15,7 @@
 
 # Start a single arm using
 # > ros2 run dvrk_robot dvrk_console_json -j <console-file>
-
-# To communicate with the arm using ROS topics, see the python based example dvrk_arm_test.py:
+# Run test script:
 # > ros2 run dvrk_python dvrk_move_wait_test.py <arm-name>
 
 import argparse

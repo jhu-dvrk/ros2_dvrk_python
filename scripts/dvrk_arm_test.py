@@ -249,8 +249,8 @@ class example_application:
         self.run_move_cp()
 
 if __name__ == '__main__':
-    # ros init node so we can use default ros arguments (e.g. __ns:= for namespace)
-    argv = crtk.ral.parse_argv(sys.argv)
+    # extract ros arguments (e.g. __ns:= for namespace)
+    argv = crtk.ral.parse_argv(sys.argv[1:]) # skip argv[0], script name
 
     # parse arguments
     parser = argparse.ArgumentParser()
@@ -259,7 +259,7 @@ if __name__ == '__main__':
                         help = 'arm name corresponding to ROS topics without namespace.  Use __ns:= to specify the namespace')
     parser.add_argument('-i', '--interval', type=float, default=0.01,
                         help = 'expected interval in seconds between messages sent by the device')
-    args = parser.parse_args(argv[1:]) # skip argv[0], script name
+    args = parser.parse_args(argv)
 
     # ROS 1 or 2 wrapper
     ral = crtk.ral('dvrk_arm_test')
