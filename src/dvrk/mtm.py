@@ -21,40 +21,35 @@ class mtm(arm):
 
     # class to contain gripper methods
     class __Gripper:
-        def __init__(self, ros_node, ros_sub_namespace, expected_interval):
-            self.__crtk_utils = crtk.utils(self, ros_node, expected_interval)
-            self.__crtk_utils.add_measured_js(ros_sub_namespace)
+        def __init__(self, ral, expected_interval):
+            self.__crtk_utils = crtk.utils(self, ral, expected_interval)
+            self.__crtk_utils.add_measured_js()
 
     # initialize the robot
-    def __init__(self, arm_name, ros_node = None,
-                 expected_interval = 0.01):
+    def __init__(self, arm_name, ral, expected_interval = 0.01):
         # first call base class constructor
-        self._arm__init_arm(arm_name, ros_node, expected_interval)
-        self.gripper = self.__Gripper(self._arm__ros_node, 'gripper/', expected_interval)
+        super().__init__(arm_name, ral, expected_interval)
+        self.gripper = self.__Gripper(self._ral.creaet_child('/gripper'), expected_interval)
 
         # publishers
-        self.__lock_orientation_publisher = self._arm__ros_node.create_publisher(geometry_msgs.msg.Quaternion,
-                                                                                 'lock_orientation',
-                                                                                 10)
-        self.__unlock_orientation_publisher = self._arm__ros_node.create_publisher(std_msgs.msg.Empty,
-                                                                                   'unlock_orientation',
-                                                                                   10)
+        self.__lock_orientation_publisher = self._ral.publisher('lock_orientation',
+                                                          geometry_msgs.msg.Quaternion,
+                                                          latch = True, queue_size = 1)
 
-        self._arm__pub_list.extend([self.__lock_orientation_publisher,
-                                    self.__unlock_orientation_publisher])
+        self.__unlock_orientation_publisher = self._ral.publisher('unlock_orientation',
+                                                            std_msgs.msg.Empty,
+                                                            latch = True, queue_size = 1)
 
     def lock_orientation_as_is(self):
         "Lock orientation based on current orientation"
         current = self.setpoint_cp()
         self.lock_orientation(current.M)
 
-
     def lock_orientation(self, orientation):
         """Lock orientation, expects a PyKDL rotation matrix (PyKDL.Rotation)"""
         q = geometry_msgs.msg.Quaternion()
         q.x, q.y, q.z, q.w = orientation.GetQuaternion()
         self.__lock_orientation_publisher.publish(q);
-
 
     def unlock_orientation(self):
         "Unlock orientation"
