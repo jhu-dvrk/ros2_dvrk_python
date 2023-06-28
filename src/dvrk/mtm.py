@@ -29,7 +29,7 @@ class mtm(arm):
     def __init__(self, ral, arm_name, expected_interval = 0.01):
         # first call base class constructor
         super().__init__(ral, arm_name, expected_interval)
-        self.gripper = self.__Gripper(self._ral.creaet_child('/gripper'), expected_interval)
+        self.gripper = self.__Gripper(self._ral.create_child('/gripper'), expected_interval)
 
         # publishers
         self.__lock_orientation_publisher = self._ral.publisher('lock_orientation',
