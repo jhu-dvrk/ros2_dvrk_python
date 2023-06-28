@@ -14,102 +14,102 @@
 # --- end cisst license ---
 
 # Start a single arm using
-# > rosrun dvrk_robot dvrk_console_json -j <console-file>
+# > ros2 run dvrk_robot dvrk_console_json -j <console-file>
 
 # To communicate with the arm using ROS topics, see the python based example dvrk_arm_test.py:
-# > rosrun dvrk_python dvrk_arm_test.py <arm-name>
+# > ros2 run dvrk_python dvrk_move_wait_test.py <arm-name>
 
 import argparse
+import crtk
 import sys
 import time
 import threading
-import rclpy
 import dvrk
 import math
 import numpy
 import PyKDL
 
-# ros init node so we can use default ros arguments (e.g. __ns:= for namespace)
-rclpy.init(args = sys.argv)
+def main(ral, arm_name, expected_interval):
+    arm = dvrk.arm(ral = ral,
+                   arm_name = arm_name,
+                   expected_interval = expected_interval)
 
-# parse arguments
-parser = argparse.ArgumentParser()
-parser.add_argument('-a', '--arm', type=str, required=True,
+    if not arm.enable(10):
+        sys.exit('failed to enable within 10 seconds')
+    if not arm.home(10):
+        sys.exit('failed to enable within 10 seconds')
+
+    print('starting move_jp')
+
+    # get current position
+    initial_joint_position = numpy.copy(arm.setpoint_jp())
+    amplitude = math.radians(10.0)
+    goal = numpy.copy(initial_joint_position)
+
+    print('--> Testing the trajectory with wait()')
+
+    start_time = time.time()
+
+    # first motion
+    goal[0] = initial_joint_position[0] + amplitude
+    arm.move_jp(goal).wait()
+
+    # second motion
+    goal[0] = initial_joint_position[0] - amplitude
+    arm.move_jp(goal).wait()
+
+    # back to initial position
+    arm.move_jp(initial_joint_position).wait()
+    print('--> Time for the full trajectory: %f seconds' % (time.time() - start_time))
+
+    print('--> Testing the trajectory with busy loop')
+    start_time = time.time()
+
+    # first motion
+    goal[0] = initial_joint_position[0] + amplitude
+    counter = 0
+
+    handle = arm.move_jp(goal)
+    while handle.is_busy():
+        counter = counter + 1
+        sys.stdout.write('\r---> Loop counter: %d' % (counter))
+        sys.stdout.flush()
+
+    # second motion
+    goal[0] = initial_joint_position[0] - amplitude
+    handle = arm.move_jp(goal)
+    while handle.is_busy():
+        counter = counter + 1
+        sys.stdout.write('\r---> Loop counter: %d' % (counter))
+        sys.stdout.flush()
+
+    # back to initial position
+    handle = arm.move_jp(initial_joint_position)
+    while handle.is_busy():
+        counter = counter + 1
+        sys.stdout.write('\r---> Loop counter: %d' % (counter))
+        sys.stdout.flush()
+
+    print('')
+    print('--> Time for the full trajectory: %f seconds' % (time.time() - start_time))
+
+    print('--> You can change the trajectory velocity in the GUI using "%s", "Direct control" and lower the "100%%" factor.  Then re-run this program.' % (args.arm))
+
+
+if __name__ == "__main__":
+    argv = crtk.ral.parse_argv(sys.argv[1:]) # skip argv[0], script name
+    ral = crtk.ral('dvrk_move_wait_test')
+
+    # parse arguments
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-a', '--arm', type=str, required=True,
                     choices=['ECM', 'MTML', 'MTMR', 'PSM1', 'PSM2', 'PSM3'],
                     help = 'arm name corresponding to ROS topics without namespace.  Use __ns:= to specify the namespace')
-parser.add_argument('-i', '--interval', type=float, default=0.01,
+    parser.add_argument('-i', '--interval', type=float, default=0.01,
                     help = 'expected interval in seconds between messages sent by the device')
-args = parser.parse_args(sys.argv[1:]) # skip argv[0], script name
+    args = parser.parse_args(argv)
 
-node = rclpy.create_node('dvrk_move_wait_test', namespace = args.arm)
+    run = lambda: main(ral, args.arm, args.interval)
+    ral.spin_and_execute(run)
 
-arm = dvrk.arm(arm_name = node.get_namespace(),
-               ros_node = node,
-               expected_interval = args.interval)
-
-executor = rclpy.executors.MultiThreadedExecutor()
-executor.add_node(node)
-executor_thread = threading.Thread(target = executor.spin, daemon = True)
-executor_thread.start()
-
-print('starting move_jp')
-
-# get current position
-initial_joint_position = numpy.copy(arm.setpoint_jp())
-amplitude = math.radians(10.0)
-goal = numpy.copy(initial_joint_position)
-
-print('--> Testing the trajectory with wait()')
-
-start_time = time.time()
-
-# first motion
-goal[0] = initial_joint_position[0] + amplitude
-arm.move_jp(goal).wait()
-
-# second motion
-goal[0] = initial_joint_position[0] - amplitude
-arm.move_jp(goal).wait()
-
-# back to initial position
-arm.move_jp(initial_joint_position).wait()
-print('--> Time for the full trajectory: %f seconds' % (time.time() - start_time))
-
-
-print('--> Testing the trajectory with busy loop')
-start_time = time.time()
-
-# first motion
-goal[0] = initial_joint_position[0] + amplitude
-counter = 0
-
-handle = arm.move_jp(goal)
-while handle.is_busy():
-    counter = counter + 1
-    sys.stdout.write('\r---> Loop counter: %d' % (counter))
-    sys.stdout.flush()
-
-# second motion
-goal[0] = initial_joint_position[0] - amplitude
-handle = arm.move_jp(goal)
-while handle.is_busy():
-    counter = counter + 1
-    sys.stdout.write('\r---> Loop counter: %d' % (counter))
-    sys.stdout.flush()
-
-# back to initial position
-handle = arm.move_jp(initial_joint_position)
-while handle.is_busy():
-    counter = counter + 1
-    sys.stdout.write('\r---> Loop counter: %d' % (counter))
-    sys.stdout.flush()
-
-print('')
-print('--> Time for the full trajectory: %f seconds' % (time.time() - start_time))
-
-print('--> You can change the trajectory velocity in the GUI using "%s", "Direct control" and lower the "100%%" factor.  Then re-run this program.' % (args.arm))
-
-print('---> Stopping ROS thread')
-rclpy.shutdown()
-executor_thread.join()
-node.destroy_node()
+   

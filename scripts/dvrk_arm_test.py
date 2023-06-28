@@ -36,7 +36,9 @@ class example_application:
         print('configuring dvrk_arm_test for node %s using namespace %s' % (ral.node_name(), ral.namespace()))
         self.ral = ral
         self.expected_interval = expected_interval
-        self.arm = dvrk.arm(ral, arm_name, expected_interval)
+        self.arm = dvrk.arm(ral = ral,
+                            arm_name = arm_name,
+                            expected_interval = expected_interval)
 
     # homing example
     def home(self):

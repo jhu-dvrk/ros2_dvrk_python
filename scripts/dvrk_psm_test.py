@@ -14,10 +14,10 @@
 # --- end cisst license ---
 
 # Start a single arm using
-# > rosrun dvrk_robot dvrk_console_json -j <console-file>
+# > ros2 run dvrk_robot dvrk_console_json -j <console-file>
 
 # To communicate with the arm using ROS topics, see the python based example dvrk_arm_test.py:
-# > rosrun dvrk_python dvrk_arm_test.py <arm-name>
+# > ros2 run dvrk_python dvrk_arm_test.py <arm-name>
 
 import argparse
 import crtk
@@ -38,7 +38,9 @@ class example_application:
 
         self.ral = ral
         self.expected_interval = expected_interval
-        self.arm = dvrk.psm(ral, arm_name, expected_interval)
+        self.arm = dvrk.psm(ral = ral,
+                            arm_name = arm_name,
+                            expected_interval = expected_interval)
 
     # homing example
     def home(self):
@@ -146,15 +148,16 @@ class example_application:
         input("    Press Enter to continue...")
         start_angle = math.radians(50.0)
         self.arm.jaw.open(angle = start_angle).wait()
-        # assume we start at 30 the move +/- 30
+        # assume we start at 50, and then move +/- 30
         amplitude = math.radians(30.0)
         duration = 5  # seconds
         samples = int(duration / self.expected_interval)
 
-        sleep_rate = self.ral.create_rate(self.expected_interval)
+        sleep_rate = self.ral.create_rate(1.0 / self.expected_interval)
         # create a new goal starting with current position
         for i in range(samples * 4):
-            goal = start_angle + amplitude * (math.cos(i * math.radians(360.0) / samples) - 1.0)
+            sine = math.sin(2 * math.pi * float(i) / samples)
+            goal = start_angle + amplitude * sine
             self.arm.jaw.servo_jp(numpy.array([goal]))
             sleep_rate.sleep()
 
