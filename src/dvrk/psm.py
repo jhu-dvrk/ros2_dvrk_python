@@ -42,7 +42,7 @@ class psm(arm):
     # initialize the robot
     def __init__(self, ral, arm_name, expected_interval = 0.01):
         # first call base class constructor
-        super().__init__(arm_name, ral, expected_interval)
+        super().__init__(ral, arm_name, expected_interval)
         jaw_ral = self._ral.create_child('/jaw')
         self.jaw = self.__Jaw(jaw_ral, expected_interval,
                               operating_state_instance = self)

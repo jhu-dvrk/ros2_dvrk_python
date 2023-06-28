@@ -24,7 +24,7 @@ class suj(object):
             self.__crtk_utils.add_measured_cp()
 
     # initialize the arm
-    def __init__(self, arm_name, ral, expected_interval = 1.0):
+    def __init__(self, ral, arm_name, expected_interval = 1.0):
         """Constructor.  This initializes a few data members.It
         requires an arm name, this will be used to find the ROS
         topics for the arm being controlled.  For example if the

@@ -20,9 +20,9 @@ class ecm(arm):
     """
     # initialize the robot
     # initialize the robot
-    def __init__(self, arm_name, ral, expected_interval = 0.01):
+    def __init__(self, ral, arm_name, expected_interval = 0.01):
         # first call base class constructor
-        super().__init__(arm_name, ral, expected_interval)
+        super().__init__(ral, arm_name, expected_interval)
 
     def insert_jp(self, depth):
         "insert the tool, by moving it to an absolute depth"

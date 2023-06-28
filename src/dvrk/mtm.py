@@ -26,9 +26,9 @@ class mtm(arm):
             self.__crtk_utils.add_measured_js()
 
     # initialize the robot
-    def __init__(self, arm_name, ral, expected_interval = 0.01):
+    def __init__(self, ral, arm_name, expected_interval = 0.01):
         # first call base class constructor
-        super().__init__(arm_name, ral, expected_interval)
+        super().__init__(ral, arm_name, expected_interval)
         self.gripper = self.__Gripper(self._ral.creaet_child('/gripper'), expected_interval)
 
         # publishers
