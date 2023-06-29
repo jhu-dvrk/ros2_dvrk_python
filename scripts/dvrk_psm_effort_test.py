@@ -16,7 +16,7 @@
 # Start a single arm using
 # > ros2 run dvrk_robot dvrk_console_json -j <console-file>
 # Run test script: 
-# > ros2 run dvrk_python dvrk_psm_effort_test.py <arm-name>
+# > ros2 run dvrk_python dvrk_psm_effort_test.py -a <arm-name>
 
 import argparse
 import crtk

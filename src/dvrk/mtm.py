@@ -14,6 +14,7 @@
 from dvrk.arm import *
 
 import geometry_msgs.msg
+from crtk_msgs.msg import CartesianImpedance
 
 class mtm(arm):
     """Simple robot API wrapping around ROS messages
@@ -40,6 +41,11 @@ class mtm(arm):
                                                             std_msgs.msg.Empty,
                                                             latch = True, queue_size = 1)
 
+        self.__set_gains_publisher = self._ral.publisher('servo_ci',
+                                                         CartesianImpedance,
+                                                         queue_size = 10)
+
+
     def lock_orientation_as_is(self):
         "Lock orientation based on current orientation"
         current = self.setpoint_cp()
@@ -49,9 +55,12 @@ class mtm(arm):
         """Lock orientation, expects a PyKDL rotation matrix (PyKDL.Rotation)"""
         q = geometry_msgs.msg.Quaternion()
         q.x, q.y, q.z, q.w = orientation.GetQuaternion()
-        self.__lock_orientation_publisher.publish(q);
+        self.__lock_orientation_publisher.publish(q)
 
     def unlock_orientation(self):
         "Unlock orientation"
         e = std_msgs.msg.Empty()
-        self.__unlock_orientation_publisher.publish(e);
+        self.__unlock_orientation_publisher.publish(e)
+
+    def servo_ci(self, gains):
+        self.__set_gains_publisher.publish(gains)

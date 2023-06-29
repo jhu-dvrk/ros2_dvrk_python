@@ -16,7 +16,7 @@
 # Start a single arm using
 # > ros2 run dvrk_robot dvrk_console_json -j <console-file>
 # Run MTM test script:
-# > ros2 run dvrk_python dvrk_mtm_test.py <arm-name>
+# > ros2 run dvrk_python dvrk_mtm_test.py -a <arm-name>
 
 import argparse
 import crtk
@@ -58,37 +58,37 @@ class example_application:
         print('press COAG pedal to move to the next test')
 
         print('arm will go limp, hold it and press coag')
-        self.coag.wait(10)
+        self.coag.wait(value = 0)
         self.arm.body.servo_cf(numpy.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0]))
 
         print('keep holding arm, press coag, a force in body frame will be applied (direction depends on wrist orientation)')
-        self.coag.wait(10)
+        self.coag.wait(value = 0)
         self.arm.body_set_cf_orientation_absolute(False)
         self.arm.body.servo_cf(numpy.array([0.0, 0.0, -3.0, 0.0, 0.0, 0.0]))
 
         print('keep holding arm, press coag, a force in world frame will be applied (fixed direction)')
-        self.coag.wait(10)
+        self.coag.wait(value = 0)
         self.arm.body_set_cf_orientation_absolute(True)
         self.arm.body.servo_cf(numpy.array([0.0, 0.0, -3.0, 0.0, 0.0, 0.0]))
 
         print('keep holding arm, press coag, orientation will be locked')
-        self.coag.wait(10)
+        self.coag.wait(value = 0)
         self.arm.lock_orientation_as_is()
 
         print('keep holding arm, press coag, force will be removed')
-        self.coag.wait(10)
+        self.coag.wait(value = 0)
         self.arm.body.servo_cf(numpy.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0]))
 
         print('keep holding arm, press coag, orientation will be unlocked')
-        self.coag.wait(10)
+        self.coag.wait(value = 0)
         self.arm.unlock_orientation()
 
         print('keep holding arm, press coag, arm will freeze in position')
-        self.coag.wait(10)
+        self.coag.wait(value = 0)
         self.arm.move_jp(self.arm.measured_jp()).wait()
 
         print('press coag to end')
-        self.coag.wait(10)
+        self.coag.wait(value = 0)
 
     # main method
     def run(self):

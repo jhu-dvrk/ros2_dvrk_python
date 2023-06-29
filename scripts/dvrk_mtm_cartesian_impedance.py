@@ -14,38 +14,25 @@
 # --- end cisst license ---
 
 # Start a single arm using
-# > rosrun dvrk_robot dvrk_console_json -j <console-file>
-
-# To communicate with the arm using ROS topics, see the python based example dvrk_arm_test.py:
-# > rosrun dvrk_python dvrk_mtm_cartesian_impedance <arm-name>
+# > ros2 run dvrk_robot dvrk_console_json -j <console-file>
+# Run test script:
+# > ros2 run dvrk_python dvrk_mtm_cartesian_impedance.py -a <arm-name>
 
 import argparse
+import crtk
 import sys
-import time
-import threading
-import rclpy
 import dvrk
-import math
 import numpy
-from sensor_msgs.msg import Joy
-from cisst_msgs.msg import CartesianImpedanceGains
+from crtk_msgs.msg import CartesianImpedance
 
-# example of application using arm.py
 class example_application:
-
-    # configuration
-    def configure(self, node, expected_interval):
-        print('configuring dvrk_mtm_cartesian_impedance for node %s using namespace %s' % (node.get_name(), node.get_namespace()))
+    def __init__(self, ral, arm_name, expected_interval):
+        print('configuring dvrk_mtm_cartesian_impedance for {}'.format(arm_name))
         self.expected_interval = expected_interval
-        self.arm = dvrk.mtm(arm_name = node.get_namespace(),
-                            ros_node = node,
+        self.arm = dvrk.mtm(ral = ral,
+                            arm_name = arm_name,
                             expected_interval = expected_interval)
-        self.coag_event = threading.Event()
-        node.create_subscription(Joy, '/footpedals/coag',
-                                 self.coag_event_cb, 10)
-        self.set_gains_publisher = node.create_publisher(CartesianImpedanceGains,
-                                                         'set_cartesian_impedance_gains',
-                                                         10)
+        self.coag = crtk.joystick_button(ral, 'footpedals/coag', 0)
 
     # homing example
     def home(self):
@@ -62,23 +49,13 @@ class example_application:
         goal.fill(0)
         self.arm.move_jp(goal).wait()
 
-    # foot pedal callback
-    def coag_event_cb(self, data):
-        if (data.buttons[0] == 1):
-            self.coag_event.set()
-
-    # wait for foot pedal
-    def wait_for_coag(self):
-        self.coag_event.clear()
-        self.coag_event.wait(600)
-
-
     # tests
     def tests(self):
         # turn on gravity compensation
         self.arm.use_gravity_compensation(True)
 
-        gains = CartesianImpedanceGains()
+        gains = CartesianImpedance()
+
         # set orientation to identity quaternions
         gains.force_orientation.w = 1.0
         gains.torque_orientation.w = 1.0
@@ -86,83 +63,83 @@ class example_application:
         print('press COAG pedal to move to next example')
 
         print('arm will be constrained in X/Y plane around the current position')
-        self.wait_for_coag()
+        self.coag.wait(value = 0)
         # set gains in z direction
-        gains.pos_stiff_neg.z = -200.0
-        gains.pos_stiff_pos.z = -200.0
-        gains.pos_damping_neg.z = -5.0
-        gains.pos_damping_pos.z = -5.0
+        gains.position_negative.p.z = -200.0
+        gains.position_positive.p.z = -200.0
+        gains.position_negative.d.z = -5.0
+        gains.position_positive.d.z = -5.0
         gains.force_position.x = self.arm.measured_cp().p[0]
         gains.force_position.y = self.arm.measured_cp().p[1]
         gains.force_position.z = self.arm.measured_cp().p[2]
-        self.set_gains_publisher.publish(gains)
+        self.arm.servo_ci(gains)
 
         print('orientation will be locked')
-        self.wait_for_coag()
+        self.coag.wait(value = 0)
         self.arm.lock_orientation_as_is()
 
         print('arm will be constrained in X/Y half plane around the current position')
-        self.wait_for_coag()
+        self.coag.wait(value = 0)
         # set gains in z direction, stiffer in half positive, 0 in negative
-        gains.pos_stiff_neg.z = 0.0
-        gains.pos_stiff_pos.z = -500.0
-        gains.pos_damping_neg.z = 0.0
-        gains.pos_damping_pos.z = -15.0
+        gains.position_negative.p.z = 0.0
+        gains.position_positive.p.z = -500.0
+        gains.position_negative.d.z = 0.0
+        gains.position_positive.d.z = -15.0
         gains.force_position.x = self.arm.measured_cp().p[0]
         gains.force_position.y = self.arm.measured_cp().p[1]
         gains.force_position.z = self.arm.measured_cp().p[2]
-        self.set_gains_publisher.publish(gains)
+        self.arm.servo_ci(gains)
 
         print('an horizontal line will be created around the current position, with viscosity along the line')
-        self.wait_for_coag()
+        self.coag.wait(value = 0)
         # set gains in x, z directions for the line
-        gains.pos_stiff_neg.x = -200.0
-        gains.pos_stiff_pos.x = -200.0
-        gains.pos_damping_neg.x = -5.0
-        gains.pos_damping_pos.x = -5.0
-        gains.pos_stiff_neg.z = -200.0
-        gains.pos_stiff_pos.z = -200.0
-        gains.pos_damping_neg.z = -5.0
-        gains.pos_damping_pos.z = -5.0
+        gains.position_negative.p.x = -200.0
+        gains.position_positive.p.x = -200.0
+        gains.position_negative.d.x = -5.0
+        gains.position_positive.d.x = -5.0
+        gains.position_negative.p.z = -200.0
+        gains.position_positive.p.z = -200.0
+        gains.position_negative.d.z = -5.0
+        gains.position_positive.d.z = -5.0
         # viscosity along the line
-        gains.pos_damping_neg.y = -10.0
-        gains.pos_damping_pos.y = -10.0
+        gains.position_negative.d.y = -10.0
+        gains.position_positive.d.y = -10.0
         # always start from current position to avoid jumps
         gains.force_position.x = self.arm.measured_cp().p[0]
         gains.force_position.y = self.arm.measured_cp().p[1]
         gains.force_position.z = self.arm.measured_cp().p[2]
-        self.set_gains_publisher.publish(gains)
+        self.arm.servo_ci(gains)
 
         print('a plane will be created perpendicular to the master gripper')
-        self.wait_for_coag()
+        self.coag.wait(value = 0)
         # set gains in x, z directions for the line
-        gains.pos_stiff_neg.x = 0.0
-        gains.pos_stiff_pos.x = 0.0
-        gains.pos_damping_neg.x = 0.0
-        gains.pos_damping_pos.x = 0.0
-        gains.pos_stiff_neg.y = 0.0
-        gains.pos_stiff_pos.y = 0.0
-        gains.pos_damping_neg.y = 0.0
-        gains.pos_damping_pos.y = 0.0
-        gains.pos_stiff_neg.z = -200.0
-        gains.pos_stiff_pos.z = -200.0
-        gains.pos_damping_neg.z = -5.0
-        gains.pos_damping_pos.z = -5.0
+        gains.position_negative.p.x = 0.0
+        gains.position_positive.p.x = 0.0
+        gains.position_negative.d.x = 0.0
+        gains.position_positive.d.x = 0.0
+        gains.position_negative.p.y = 0.0
+        gains.position_positive.p.y = 0.0
+        gains.position_negative.d.y = 0.0
+        gains.position_positive.d.y = 0.0
+        gains.position_negative.p.z = -200.0
+        gains.position_positive.p.z = -200.0
+        gains.position_negative.d.z = -5.0
+        gains.position_positive.d.z = -5.0
 
         stiffOri = -0.2
         dampOri = -0.01
-        gains.ori_stiff_neg.x = stiffOri
-        gains.ori_stiff_pos.x = stiffOri
-        gains.ori_damping_neg.x = dampOri
-        gains.ori_damping_pos.x = dampOri
-        gains.ori_stiff_neg.y = stiffOri
-        gains.ori_stiff_pos.y = stiffOri
-        gains.ori_damping_neg.y = dampOri
-        gains.ori_damping_pos.y = dampOri
-        gains.ori_stiff_neg.z = 0.0
-        gains.ori_stiff_pos.z = 0.0
-        gains.ori_damping_neg.z = 0.0
-        gains.ori_damping_pos.z = 0.0
+        gains.orientation_negative.p.x = stiffOri
+        gains.orientation_positive.p.x = stiffOri
+        gains.orientation_negative.d.x = dampOri
+        gains.orientation_positive.d.x = dampOri
+        gains.orientation_negative.p.y = stiffOri
+        gains.orientation_positive.p.y = stiffOri
+        gains.orientation_negative.d.y = dampOri
+        gains.orientation_positive.d.y = dampOri
+        gains.orientation_negative.p.z = 0.0
+        gains.orientation_positive.p.z = 0.0
+        gains.orientation_negative.d.z = 0.0
+        gains.orientation_positive.d.z = 0.0
 
         # always start from current position to avoid jumps
         gains.force_position.x = self.arm.measured_cp().p[0]
@@ -177,16 +154,15 @@ class example_application:
         gains.torque_orientation.y = orientationQuaternion[1]
         gains.torque_orientation.z = orientationQuaternion[2]
         gains.torque_orientation.w = orientationQuaternion[3]
-        self.set_gains_publisher.publish(gains)
+        self.arm.servo_ci(gains)
         self.arm.unlock_orientation()
 
         print('keep holding arm, press coag, arm will freeze in position')
-        self.wait_for_coag()
+        self.coag.wait(value = 0)
         self.arm.move_jp(self.arm.measured_jp()).wait()
 
         print('press coag to end')
-        self.wait_for_coag()
-
+        self.coag.wait(value = 0)
 
     # main method
     def run(self):
@@ -194,9 +170,8 @@ class example_application:
         self.tests()
 
 
-if __name__ == '__main__':
-    # ros init node so we can use default ros arguments (e.g. __ns:= for namespace)
-    rclpy.init(args = sys.argv)
+def main():
+    argv = crtk.ral.parse_argv(sys.argv[1:]) # skip argv[0], script name
 
     # parse arguments
     parser = argparse.ArgumentParser()
@@ -205,23 +180,12 @@ if __name__ == '__main__':
                         help = 'arm name corresponding to ROS topics without namespace.  Use __ns:= to specify the namespace')
     parser.add_argument('-i', '--interval', type=float, default=0.01,
                         help = 'expected interval in seconds between messages sent by the device')
-    args = parser.parse_args(sys.argv[1:]) # skip argv[0], script name
+    args = parser.parse_args(argv)
 
-    node = rclpy.create_node('dvrk_mtm_cartesian_impedance', namespace = args.arm)
-    application = example_application()
-    application.configure(node, args.interval)
+    ral = crtk.ral('dvrk_mtm_cartesian_impedance')
+    application = example_application(ral, args.arm, args.interval)
+    ral.spin_and_execute(application.run)
 
-    executor = rclpy.executors.MultiThreadedExecutor()
-    executor.add_node(node)
-    executor_thread = threading.Thread(target = executor.spin, daemon = True)
-    executor_thread.start()
 
-    try:
-        application.run()
-    except KeyboardInterrupt:
-        pass
-
-    print('stopping ROS thread')
-    rclpy.shutdown()
-    executor_thread.join()
-    node.destroy_node()
+if __name__ == '__main__':
+    main()
