@@ -3,7 +3,7 @@
 # Author: Anton Deguet
 # Date: 2015-02-22
 
-# (C) Copyright 2015-2022 Johns Hopkins University (JHU), All Rights Reserved.
+# (C) Copyright 2015-2023 Johns Hopkins University (JHU), All Rights Reserved.
 
 # --- begin cisst license - do not edit ---
 
@@ -20,11 +20,11 @@
 
 import argparse
 import crtk
-import sys
 import dvrk
 import math
 import numpy
 import PyKDL
+import sys
 
 if sys.version_info.major < 3:
     input = raw_input
@@ -43,6 +43,8 @@ class example_application:
 
     # homing example
     def home(self):
+        self.ral.check_connections()
+
         print('starting enable')
         if not self.arm.enable(10):
             sys.exit('failed to enable within 10 seconds')

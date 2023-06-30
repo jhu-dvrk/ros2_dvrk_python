@@ -3,7 +3,7 @@
 # Author: Anton Deguet
 # Date: 2017-07-22
 
-# (C) Copyright 2017-2022 Johns Hopkins University (JHU), All Rights Reserved.
+# (C) Copyright 2017-2023 Johns Hopkins University (JHU), All Rights Reserved.
 
 # --- begin cisst license - do not edit ---
 
@@ -20,14 +20,16 @@
 
 import argparse
 import crtk
-import sys
+from crtk_msgs.msg import CartesianImpedance
 import dvrk
 import numpy
-from crtk_msgs.msg import CartesianImpedance
+import sys
+
 
 class example_application:
     def __init__(self, ral, arm_name, expected_interval):
         print('configuring dvrk_mtm_cartesian_impedance for {}'.format(arm_name))
+        self.ral = ral
         self.expected_interval = expected_interval
         self.arm = dvrk.mtm(ral = ral,
                             arm_name = arm_name,
@@ -36,6 +38,8 @@ class example_application:
 
     # homing example
     def home(self):
+        self.ral.check_connections()
+
         print('starting enable')
         if not self.arm.enable(10):
             sys.exit('failed to enable within 10 seconds')

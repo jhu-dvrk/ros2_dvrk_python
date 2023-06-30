@@ -20,18 +20,19 @@
 
 import argparse
 import crtk
-import sys
-import time
-import threading
 import dvrk
 import math
 import numpy
-import PyKDL
+import sys
+import time
+
 
 def main(ral, arm_name, expected_interval):
     arm = dvrk.arm(ral = ral,
                    arm_name = arm_name,
                    expected_interval = expected_interval)
+
+    ral.check_connections()
 
     if not arm.enable(10):
         sys.exit('failed to enable within 10 seconds')
@@ -110,5 +111,3 @@ if __name__ == "__main__":
 
     run = lambda: main(ral, args.arm, args.interval)
     ral.spin_and_execute(run)
-
-   

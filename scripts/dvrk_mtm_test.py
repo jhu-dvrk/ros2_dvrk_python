@@ -3,7 +3,7 @@
 # Author: Anton Deguet
 # Date: 2017-07-22
 
-# (C) Copyright 2017-2022 Johns Hopkins University (JHU), All Rights Reserved.
+# (C) Copyright 2017-2023 Johns Hopkins University (JHU), All Rights Reserved.
 
 # --- begin cisst license - do not edit ---
 
@@ -15,14 +15,14 @@
 
 # Start a single arm using
 # > ros2 run dvrk_robot dvrk_console_json -j <console-file>
-# Run MTM test script:
+# Run test script:
 # > ros2 run dvrk_python dvrk_mtm_test.py -a <arm-name>
 
 import argparse
 import crtk
-import sys
 import dvrk
 import numpy
+import sys
 
 
 class example_application:
@@ -37,6 +37,8 @@ class example_application:
 
     # homing example
     def home(self):
+        self.ral.check_connections()
+
         print('starting enable')
         if not self.arm.enable(10):
             sys.exit('failed to enable within 10 seconds')

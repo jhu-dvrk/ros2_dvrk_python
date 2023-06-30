@@ -14,10 +14,10 @@
 # --- end cisst license ---
 
 # Start a single arm using
-# > rosrun dvrk_robot dvrk_console_json -j <console-file>
+# > ros2 run dvrk_robot dvrk_console_json -j <console-file>
 
 # To communicate with the arm using ROS topics, see the python based example dvrk_arm_test.py:
-# > rosrun dvrk_python dvrk_arm_test.py -a <arm-name>
+# > ros2 run dvrk_python dvrk_arm_test.py -a <arm-name>
 
 import argparse
 import sys
@@ -33,7 +33,7 @@ class example_application:
 
     # configuration
     def __init__(self, ral, arm_name, expected_interval):
-        print('configuring dvrk_arm_test for node %s using namespace %s' % (ral.node_name(), ral.namespace()))
+        print('configuring dvrk_arm_test for {}'.format(arm_name))
         self.ral = ral
         self.expected_interval = expected_interval
         self.arm = dvrk.arm(ral = ral,
@@ -42,7 +42,6 @@ class example_application:
 
     # homing example
     def home(self):
-        print('testing connections')
         self.arm.check_connections()
 
         print('starting enable')
@@ -114,6 +113,7 @@ class example_application:
         goal_p = numpy.copy(initial_joint_position)
         goal_v = numpy.zeros(goal_p.size)
         start = time.time()
+
         sleep_rate = self.ral.create_rate(1.0 / self.expected_interval)
         for i in range(int(samples)):
             angle = i * math.radians(360.0) / samples
@@ -123,6 +123,7 @@ class example_application:
             goal_v[1] = goal_v[0]
             self.arm.servo_jp(goal_p, goal_v)
             sleep_rate.sleep()
+
         actual_duration = time.time() - start
         print('servo_jp complete in %2.2f seconds (expected %2.2f)' % (actual_duration, duration))
 
@@ -178,6 +179,7 @@ class example_application:
         duration = 5  # 5 seconds
         samples = duration / self.expected_interval
         start = time.time()
+
         sleep_rate = self.ral.create_rate(1.0 / self.expected_interval)
         for i in range(int(samples)):
             goal.p[0] =  initial_cartesian_position.p[0] + amplitude *  (1.0 - math.cos(i * math.radians(360.0) / samples))
@@ -194,6 +196,7 @@ class example_application:
             if error > 0.002: # 2 mm
                 print('Inverse kinematic error in position [%i]: %s (might be due to latency)' % (i, error))
             sleep_rate.sleep()
+
         actual_duration = time.time() - start
         print('servo_cp complete in %2.2f seconds (expected %2.2f)' % (actual_duration, duration))
 
@@ -261,7 +264,6 @@ if __name__ == '__main__':
                         help = 'expected interval in seconds between messages sent by the device')
     args = parser.parse_args(argv)
 
-    # ROS 1 or 2 wrapper
     ral = crtk.ral('dvrk_arm_test')
     application = example_application(ral, args.arm, args.interval)
     ral.spin_and_execute(application.run)

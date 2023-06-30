@@ -3,7 +3,7 @@
 # Author: Anton Deguet
 # Date: 2015-02-22
 
-# (C) Copyright 2015-2022 Johns Hopkins University (JHU), All Rights Reserved.
+# (C) Copyright 2015-2023 Johns Hopkins University (JHU), All Rights Reserved.
 
 # --- begin cisst license - do not edit ---
 
@@ -20,12 +20,13 @@
 
 import argparse
 import crtk
-import sys
-import time
-import threading
 import dvrk
 import math
 import numpy
+import sys
+
+if sys.version_info.major < 3:
+    input = raw_input
 
 # example of application using arm.py
 class example_application:
@@ -177,4 +178,3 @@ if __name__ == '__main__':
     ral = crtk.ral('dvrk_psm_effort_test')
     application = example_application(ral, args.arm, args.interval)
     ral.spin_and_execute(application.run)
-
