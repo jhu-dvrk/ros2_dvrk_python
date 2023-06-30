@@ -51,7 +51,7 @@ class psm(arm):
         self.__set_tool_present_publisher = jaw_ral.publisher('/set_tool_present',
                                                               std_msgs.msg.Bool,
                                                               latch = True, queue_size = 1)
-        
+
     def insert_jp(self, depth):
         "insert the tool, by moving it to an absolute depth"
         goal = numpy.copy(self.setpoint_jp())

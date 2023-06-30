@@ -95,7 +95,7 @@ class arm(object):
         self.__trajectory_j_ratio_sub = self._ral.subscriber(
             '/trajectory_j/ratio', std_msgs.msg.Float64,
             self.__trajectory_j_ratio_cb)
-        
+
     def name(self):
         return self._arm_name
 
