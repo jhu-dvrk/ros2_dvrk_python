@@ -3,7 +3,7 @@
 # Author: Anton Deguet
 # Date: 2015-02-22
 
-# (C) Copyright 2015-2022 Johns Hopkins University (JHU), All Rights Reserved.
+# (C) Copyright 2015-2023 Johns Hopkins University (JHU), All Rights Reserved.
 
 # --- begin cisst license - do not edit ---
 
@@ -14,40 +14,44 @@
 # --- end cisst license ---
 
 # Start a single arm using
-# > rosrun dvrk_robot dvrk_console_json -j <console-file>
-
-# To communicate with the arm using ROS topics, see the python based example dvrk_arm_test.py:
-# > rosrun dvrk_python dvrk_arm_test.py <arm-name>
+# > ros2 run dvrk_robot dvrk_console_json -j <console-file>
+# Run test script:
+# > ros2 run dvrk_python dvrk_arm_test.py -a <arm-name>
 
 import argparse
-import sys
-import time
-import threading
-import rclpy
+import crtk
 import dvrk
 import math
 import numpy
 import PyKDL
+import sys
+
+if sys.version_info.major < 3:
+    input = raw_input
+
 
 # example of application using arm.py
 class example_application:
+    def __init__(self, ral, arm_name, expected_interval):
+        print('configuring dvrk_psm_test for {}'.format(arm_name))
 
-    # configuration
-    def configure(self, node, expected_interval):
-        print('configuring dvrk_psm_test for node %s using namespace %s' % (node.get_name(), node.get_namespace()))
+        self.ral = ral
         self.expected_interval = expected_interval
-        self.arm = dvrk.psm(arm_name = node.get_namespace(),
-                            ros_node = node,
+        self.arm = dvrk.psm(ral = ral,
+                            arm_name = arm_name,
                             expected_interval = expected_interval)
 
     # homing example
     def home(self):
+        self.ral.check_connections()
+
         print('starting enable')
         if not self.arm.enable(10):
             sys.exit('failed to enable within 10 seconds')
         print('starting home')
         if not self.arm.home(10):
             sys.exit('failed to home within 10 seconds')
+
         # get current joints just to set size
         print('move to starting position')
         goal = numpy.copy(self.arm.setpoint_jp())
@@ -145,19 +149,18 @@ class example_application:
         input("    Press Enter to continue...")
         start_angle = math.radians(50.0)
         self.arm.jaw.open(angle = start_angle).wait()
-        # assume we start at 30 the move +/- 30
+        # assume we start at 50, and then move +/- 30
         amplitude = math.radians(30.0)
         duration = 5  # seconds
         samples = int(duration / self.expected_interval)
+
+        sleep_rate = self.ral.create_rate(1.0 / self.expected_interval)
         # create a new goal starting with current position
         for i in range(samples * 4):
-            tic = time.time()
-            goal = start_angle + amplitude * (math.cos(i * math.radians(360.0) / samples) - 1.0)
+            sine = math.sin(2 * math.pi * float(i) / samples)
+            goal = start_angle + amplitude * sine
             self.arm.jaw.servo_jp(numpy.array([goal]))
-            dt = time.time() - tic
-            time_left = self.expected_interval - dt
-            if time_left > 0:
-                time.sleep(time_left)
+            sleep_rate.sleep()
 
     # main method
     def run(self):
@@ -168,8 +171,8 @@ class example_application:
 
 
 if __name__ == '__main__':
-    # ros init node so we can use default ros arguments (e.g. __ns:= for namespace)
-    rclpy.init(args = sys.argv)
+    # strip ros arguments
+    argv = crtk.ral.parse_argv(sys.argv[1:]) # skip argv[0], script name
 
     # parse arguments
     parser = argparse.ArgumentParser()
@@ -178,23 +181,8 @@ if __name__ == '__main__':
                         help = 'arm name corresponding to ROS topics without namespace.  Use __ns:= to specify the namespace')
     parser.add_argument('-i', '--interval', type=float, default=0.01,
                         help = 'expected interval in seconds between messages sent by the device')
-    args = parser.parse_args(sys.argv[1:]) # skip argv[0], script name
+    args = parser.parse_args(argv)
 
-    node = rclpy.create_node('dvrk_arm_test', namespace = args.arm)
-    application = example_application()
-    application.configure(node, args.interval)
-
-    executor = rclpy.executors.MultiThreadedExecutor()
-    executor.add_node(node)
-    executor_thread = threading.Thread(target = executor.spin, daemon = True)
-    executor_thread.start()
-
-    try:
-        application.run()
-    except KeyboardInterrupt:
-        pass
-
-    print('stopping ROS thread')
-    rclpy.shutdown()
-    executor_thread.join()
-    node.destroy_node()
+    ral = crtk.ral('dvrk_psm_test')
+    application = example_application(ral, args.arm, args.interval)
+    ral.spin_and_execute(application.run)

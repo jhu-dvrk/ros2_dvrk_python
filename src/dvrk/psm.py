@@ -13,6 +13,7 @@
 
 from dvrk.arm import *
 
+import math
 import numpy
 
 class psm(arm):
@@ -21,13 +22,13 @@ class psm(arm):
 
     # class to contain jaw methods
     class __Jaw:
-        def __init__(self, ros_node, ros_sub_namespace, expected_interval, operating_state_instance):
-            self.__crtk_utils = crtk.utils(self, ros_node, expected_interval, operating_state_instance)
-            self.__crtk_utils.add_measured_js(ros_sub_namespace)
-            self.__crtk_utils.add_setpoint_js(ros_sub_namespace)
-            self.__crtk_utils.add_servo_jp(ros_sub_namespace)
-            self.__crtk_utils.add_move_jp(ros_sub_namespace)
-            self.__crtk_utils.add_servo_jf(ros_sub_namespace)
+        def __init__(self, ral, expected_interval, operating_state_instance):
+            self.__crtk_utils = crtk.utils(self, ral, expected_interval, operating_state_instance)
+            self.__crtk_utils.add_measured_js()
+            self.__crtk_utils.add_setpoint_js()
+            self.__crtk_utils.add_servo_jp()
+            self.__crtk_utils.add_move_jp()
+            self.__crtk_utils.add_servo_jf()
 
         def close(self):
             "Close the tool jaw"
@@ -39,18 +40,17 @@ class psm(arm):
 
 
     # initialize the robot
-    def __init__(self, arm_name, ros_node,
-                 expected_interval = 0.01):
+    def __init__(self, ral, arm_name, expected_interval = 0.01):
         # first call base class constructor
-        self._arm__init_arm(arm_name, ros_node, expected_interval)
-        self.jaw = self.__Jaw(self._arm__ros_node, 'jaw/', expected_interval,
+        super().__init__(ral, arm_name, expected_interval)
+        jaw_ral = self._ral.create_child('/jaw')
+        self.jaw = self.__Jaw(jaw_ral, expected_interval,
                               operating_state_instance = self)
 
         # publishers
-        self.__set_tool_present_publisher = self._arm__ros_node.create_publisher(std_msgs.msg.Bool,
-                                                                                 'jaw/set_tool_present',
-                                                                                 10) # latch = True
-        self._arm__pub_list.extend([self.__set_tool_present_publisher])
+        self.__set_tool_present_publisher = jaw_ral.publisher('/set_tool_present',
+                                                              std_msgs.msg.Bool,
+                                                              latch = True, queue_size = 1)
 
     def insert_jp(self, depth):
         "insert the tool, by moving it to an absolute depth"

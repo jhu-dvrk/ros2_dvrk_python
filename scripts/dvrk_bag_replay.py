@@ -19,10 +19,10 @@
 # To communicate with the arm using ROS topics, see the python based example dvrk_arm_test.py:
 # > rosrun dvrk_python dvrk_bag_replay.py -a PSM1 -b /home/anton/2021-06-24-10-55-04.bag -t /PSM1/local/measured_cp
 
+import crtk
 import dvrk
 import sys
 import time
-import rospy
 import rosbag
 import numpy
 import PyKDL
@@ -31,10 +31,10 @@ import argparse
 if sys.version_info.major < 3:
     input = raw_input
 
-# ros init node so we can use default ros arguments (e.g. __ns:= for namespace)
-rospy.init_node('dvrk_bag_replay', anonymous=True)
 # strip ros arguments
-argv = rospy.myargv(argv=sys.argv)
+argv = crtk.ral.parse_argv(sys.argv)
+# initialize RAL
+ral = crtk.ral('dvrk_bag_replay')
 
 # parse arguments
 parser = argparse.ArgumentParser()
@@ -106,8 +106,7 @@ duration = poses[-1].header.stamp.to_sec() - poses[0].header.stamp.to_sec()
 print ('-- Duration of trajectory: %f seconds' % (duration))
 
 # send trajectory to arm
-arm = dvrk.arm(arm_name = args.arm,
-               expected_interval = args.interval)
+arm = dvrk.arm(ral, args.arm, args.interval)
 
 # make sure the arm is powered
 print('-- Enabling arm')
