@@ -43,14 +43,14 @@ class psm(arm):
     def __init__(self, ral, arm_name, expected_interval = 0.01):
         # first call base class constructor
         super().__init__(ral, arm_name, expected_interval)
-        jaw_ral = self._ral.create_child('/jaw')
+        jaw_ral = self.ral().create_child('/jaw')
         self.jaw = self.__Jaw(jaw_ral, expected_interval,
                               operating_state_instance = self)
 
         # publishers
-        self.__set_tool_present_publisher = jaw_ral.publisher('/set_tool_present',
-                                                              std_msgs.msg.Bool,
-                                                              latch = True, queue_size = 1)
+        self.__set_tool_present_publisher = self.ral().publisher('/emulate_tool_present',
+                                                                 std_msgs.msg.Bool,
+                                                                 latch = True, queue_size = 1)
 
     def insert_jp(self, depth):
         "insert the tool, by moving it to an absolute depth"
