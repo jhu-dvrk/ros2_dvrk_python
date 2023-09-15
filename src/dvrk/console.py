@@ -32,19 +32,28 @@ class console(object):
         # publishers
         self.__power_off_pub = self.__ral.publisher('/power_off',
                                                     std_msgs.msg.Empty,
-                                                    latch = True, queue_size = 1)
+                                                    latch = False, queue_size = 1)
         self.__power_on_pub = self.__ral.publisher('/power_on',
                                                    std_msgs.msg.Empty,
-                                                   latch = True, queue_size = 1)
+                                                   latch = False, queue_size = 1)
         self.__home_pub = self.__ral.publisher('/home',
                                                std_msgs.msg.Empty,
-                                               latch = True, queue_size = 1)
+                                               latch = False, queue_size = 1)
         self.__teleop_enable_pub = self.__ral.publisher('/teleop/enable',
                                                         std_msgs.msg.Bool,
-                                                        latch = True, queue_size = 1)
+                                                        latch = False, queue_size = 1)
         self.__teleop_set_scale_pub = self.__ral.publisher('/teleop/set_scale',
                                                            std_msgs.msg.Float64,
-                                                           latch = True, queue_size = 1)
+                                                           latch = False, queue_size = 1)
+        self.__set_volume_pub = self.__ral.publisher('/set_volume',
+                                                     std_msgs.msg.Float64,
+                                                     latch = False, queue_size = 1)
+        self.__beep_pub = self.__ral.publisher('/beep',
+                                               std_msgs.msg.Float64MultiArray,
+                                               latch = False, queue_size = 1)
+        self.__string_to_speech_pub = self.__ral.publisher('/string_to_speech',
+                                                           std_msgs.msg.String,
+                                                           latch = False, queue_size = 1)
 
         # subscribers
         self.__teleop_scale_sub = self.__ral.subscriber('/teleop/scale',
@@ -87,3 +96,21 @@ class console(object):
 
     def teleop_get_scale(self):
         return self.__teleop_scale
+
+    def set_volume(self, volume):
+        msg = std_msgs.msg.Float64()
+        msg.data = volume
+        self.__set_volume_pub.publish(msg)
+
+    def beep(self, duration, frequency, volume = 1.0):
+        msg = std_msgs.msg.Float64MultiArray()
+        msg.data = [duration, frequency, volume]
+        msg.layout.data_offset = 0
+        msg.layout.dim = []
+        msg.layout.dim.append(std_msgs.msg.MultiArrayDimension('values', 3, 1))
+        self.__beep_pub.publish(msg)
+
+    def string_to_speech(self, string):
+        msg = std_msgs.msg.String()
+        msg.data = string
+        self.__string_to_speech_pub.publish(msg)
