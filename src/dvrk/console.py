@@ -58,7 +58,7 @@ class console(object):
         # subscribers
         self.__teleop_scale_sub = self.__ral.subscriber('/teleop/scale',
                                                         std_msgs.msg.Float64,
-                                                        self.__teleop_scale_cb
+                                                        self.__teleop_scale_cb,
                                                         latch = True)
 
     def __teleop_scale_cb(self, data):
