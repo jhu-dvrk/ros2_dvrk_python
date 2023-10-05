@@ -64,7 +64,7 @@ class example_application:
         gains.force_orientation.w = 1.0
         gains.torque_orientation.w = 1.0
 
-        print('press COAG pedal to move to next example')
+        print('press and release the COAG pedal to move to next example, always hold the arm')
 
         print('arm will be constrained in X/Y plane around the current position')
         self.coag.wait(value = 0)
@@ -161,12 +161,9 @@ class example_application:
         self.arm.servo_ci(gains)
         self.arm.unlock_orientation()
 
-        print('keep holding arm, press coag, arm will freeze in position')
+        print('arm will freeze in position')
         self.coag.wait(value = 0)
-        self.arm.move_jp(self.arm.measured_jp()).wait()
-
-        print('press coag to end')
-        self.coag.wait(value = 0)
+        self.arm.hold()
 
     # main method
     def run(self):

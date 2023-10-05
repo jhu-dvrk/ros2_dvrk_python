@@ -86,6 +86,7 @@ class calibration_psm:
         self.arm = dvrk.psm(ral = ral,
                             arm_name = arm_name,
                             expected_interval = expected_interval)
+        self.arm.check_connections()
 
     # homing example
     def home(self):
