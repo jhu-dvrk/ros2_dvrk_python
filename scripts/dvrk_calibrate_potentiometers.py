@@ -304,7 +304,7 @@ class potentiometer_calibration:
             a_to_j_service = ral.service_client(self.ros_namespace + '/actuator_to_joint_position', cisst_msgs.srv.ConvertFloat64Array)
             request = cisst_msgs.srv.ConvertFloat64Array.Request()
             request.input = offsets
-            response = a_to_j_service(request)
+            response = a_to_j_service.call(request)
             offsets = response.output
 
             newOffsets = []
