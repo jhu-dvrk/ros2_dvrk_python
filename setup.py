@@ -5,7 +5,7 @@ package_name = 'dvrk_python'
 
 setup(
     name = package_name,
-    version = '2.2.0',
+    version = '2.2.1',
     packages = ['dvrk'],
     package_dir = {'': 'src'},
     data_files = [
