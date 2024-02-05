@@ -53,7 +53,7 @@ class suj(object):
     def ral(self):
         return self.__ral
 
-class voltages(object):
+class voltage(object):
 
     def __init__(self, name, sub_name, measured_jp, nb_joints):
         self.name = name
@@ -73,16 +73,36 @@ class main_widget(QWidget):
         self.SUJ = suj(self.ral)
         self.SUJ.ral().check_connections()
 
+        self.arm_list = ['ECM', 'PSM1', 'PSM2', 'PSM3']
+        self.pot_list = ['primary', 'secondary']
+
+        # SUJ Si
+        self.nb_joints = {
+            'ECM': 4,
+            'PSM1': 4,
+            'PSM2': 4,
+            'PSM3': 5
+            }
+
         # setup CRTK clients
-        self.all_voltages = []
-        self.all_voltages.append(voltages("ECM", "primary",   self.SUJ.ECM.primary_voltage.measured_jp, 4))
-        self.all_voltages.append(voltages("ECM", "secondary", self.SUJ.ECM.secondary_voltage.measured_jp, 4))
-        self.all_voltages.append(voltages("PSM1", "primary",   self.SUJ.PSM1.primary_voltage.measured_jp, 4))
-        self.all_voltages.append(voltages("PSM1", "secondary", self.SUJ.PSM1.secondary_voltage.measured_jp, 4))
-        self.all_voltages.append(voltages("PSM2", "primary",   self.SUJ.PSM2.primary_voltage.measured_jp, 4))
-        self.all_voltages.append(voltages("PSM2", "secondary", self.SUJ.PSM2.secondary_voltage.measured_jp, 4))
-        self.all_voltages.append(voltages("PSM3", "primary",   self.SUJ.PSM3.primary_voltage.measured_jp, 5))
-        self.all_voltages.append(voltages("PSM3", "secondary", self.SUJ.PSM3.secondary_voltage.measured_jp, 5))
+        self.all_voltages = {}
+        for a in self.arm_list:
+            for p in self.pot_list:
+                self.all_voltages[a + '-' + p] = voltage(a, p,
+                                                          eval('self.SUJ.' + a + '.' + p + '_voltage.measured_jp'),
+                                                          self.nb_joints[a])
+
+        # initialize mechanical limits
+        torad = math.pi / 180.0
+        self.joint_limits = {}
+        self.joint_limits['ECM-minimum']  = numpy.array([0.0,   -100.0 * torad, -157.0 * torad, -106.0 * torad])
+        self.joint_limits['ECM-maximum']  = numpy.array([0.4826, 100.0 * torad,  157.0 * torad,  106.0 * torad])
+        self.joint_limits['PSM1-minimum'] = numpy.array([0.0,    -95.0 * torad, -163.0 * torad,  -99.5 * torad])
+        self.joint_limits['PSM1-maximum'] = numpy.array([0.4826,  95.0 * torad,    3.0 * torad,   95.0 * torad])
+        self.joint_limits['PSM2-minimum'] = numpy.array([0.0,    -95.0 * torad,   -3.0 * torad,  -95.0 * torad])
+        self.joint_limits['PSM2-maximum'] = numpy.array([0.4826,  95.0 * torad,  163.0 * torad,   99.5 * torad])
+        self.joint_limits['PSM3-minimum'] = numpy.array([0.0,    -97.5 * torad, -154.5 * torad, -135.0 * torad,  95.0 * torad])
+        self.joint_limits['PSM3-maximum'] = numpy.array([0.5842,  97.5 * torad,   82.0 * torad,  152.5 * torad, 185.5 * torad])
 
         # GUI
         self.setWindowTitle('dVRK SUJ Calibration')
@@ -92,7 +112,7 @@ class main_widget(QWidget):
         self.table = QTableWidget(8, 7)
         self.mainLayout.addWidget(self.table)
         counter = 0
-        for v in self.all_voltages:
+        for v in self.all_voltages.values():
             newItem = QTableWidgetItem(v.name)
             self.table.setItem(counter, 0, newItem)
             newItem = QTableWidgetItem(v.sub_name)
@@ -113,7 +133,7 @@ class main_widget(QWidget):
 
     def timer_cb(self):
         counter = 0
-        for v in self.all_voltages:
+        for v in self.all_voltages.values():
             jp = v.measured_jp()
             v.minimum = numpy.minimum(v.minimum, jp)
             v.maximum = numpy.maximum(v.maximum, jp)
@@ -125,7 +145,13 @@ class main_widget(QWidget):
 
 
     def save_cb(self):
-        print('argh')
+        for a in self.arm_list:
+            for p in self.pot_list:
+                for j in range(self.nb_joints[a]):
+                    s = ((self.joint_limits[a + '-maximum'][j] - self.joint_limits[a + '-minimum'][j])
+                         / (self.all_voltages[a + '-' + p].maximum[j] - self.all_voltages[a + '-' + p].minimum[j]))
+                    print(f'{a}-{p}[{j}] = {s}')
+
 
 # GUI
 app = QApplication([])
