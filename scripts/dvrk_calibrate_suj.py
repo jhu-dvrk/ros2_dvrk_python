@@ -18,8 +18,9 @@ import numpy
 import math
 
 import sys
+import datetime
 
-from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QTableWidget, QTableWidgetItem, QPushButton
+from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QTableWidget, QTableWidgetItem, QPushButton, QMessageBox
 from PyQt5.QtCore import QTimer
 
 class suj(object):
@@ -65,8 +66,9 @@ class voltage(object):
 
 class main_widget(QWidget):
 
-    def __init__(self, parent = None):
+    def __init__(self, app, parent = None):
         super(main_widget, self).__init__(parent)
+        self.app = app
         self.ral = crtk.ral('dvrk_calibrate_suj')
         self.ral.spin()
 
@@ -92,7 +94,7 @@ class main_widget(QWidget):
                                                           eval('self.SUJ.' + a + '.' + p + '_voltage.measured_jp'),
                                                           self.nb_joints[a])
 
-        # initialize mechanical limits
+        # initialize mechanical limits for SI SUJ
         torad = math.pi / 180.0
         self.joint_limits = {}
         self.joint_limits['ECM-minimum']  = numpy.array([0.0,   -100.0 * torad, -157.0 * torad, -106.0 * torad])
@@ -101,8 +103,13 @@ class main_widget(QWidget):
         self.joint_limits['PSM1-maximum'] = numpy.array([0.4826,  95.0 * torad,    3.0 * torad,   95.0 * torad])
         self.joint_limits['PSM2-minimum'] = numpy.array([0.0,    -95.0 * torad,   -3.0 * torad,  -95.0 * torad])
         self.joint_limits['PSM2-maximum'] = numpy.array([0.4826,  95.0 * torad,  163.0 * torad,   99.5 * torad])
-        self.joint_limits['PSM3-minimum'] = numpy.array([0.0,    -97.5 * torad, -154.5 * torad, -135.0 * torad,  95.0 * torad])
-        self.joint_limits['PSM3-maximum'] = numpy.array([0.5842,  97.5 * torad,   82.0 * torad,  152.5 * torad, 185.5 * torad])
+        self.joint_limits['PSM3-minimum'] = numpy.array([0.0,    -97.5 * torad, -154.5 * torad, -135.0 * torad, -30.0 * torad])
+        self.joint_limits['PSM3-maximum'] = numpy.array([0.5842,  97.5 * torad,   82.0 * torad,  152.5 * torad,  95.0 * torad])
+        self.pot_directions = {}
+        self.pot_directions['ECM']  = numpy.array([-1.0,  1.0,  1.0,  1.0])
+        self.pot_directions['PSM1'] = numpy.array([-1.0,  1.0,  1.0, -1.0])
+        self.pot_directions['PSM2'] = numpy.array([-1.0,  1.0,  1.0, -1.0])
+        self.pot_directions['PSM3'] = numpy.array([-1.0,  1.0, -1.0,  1.0, -1.0])
 
         # GUI
         self.setWindowTitle('dVRK SUJ Calibration')
@@ -122,9 +129,13 @@ class main_widget(QWidget):
                 self.table.setItem(counter, 2 + i, newItem)
             counter += 1
 
-        self.saveButton = QPushButton('Save')
-        self.mainLayout.addWidget(self.saveButton)
-        self.saveButton.clicked.connect(self.save_cb)
+        self.showButton = QPushButton('Show')
+        self.mainLayout.addWidget(self.showButton)
+        self.showButton.clicked.connect(self.show_cb)
+
+        self.showButton = QPushButton('Quit')
+        self.mainLayout.addWidget(self.showButton)
+        self.showButton.clicked.connect(self.quit_cb)
 
         # timer
         self.timer = QTimer()
@@ -144,21 +155,50 @@ class main_widget(QWidget):
         self.table.resizeColumnsToContents()
 
 
-    def save_cb(self):
+    def show_cb(self):
+        self.all_offsets = {}
+        self.all_scales = {}
+        now = datetime.datetime.now()
+        print(f'-- at {now.hour}:{now.minute}:{now.second} ---')
         for a in self.arm_list:
+            print(f'--- {a} ----')
             for p in self.pot_list:
+                self.all_scales[a + p] = numpy.zeros(self.nb_joints[a])
+                self.all_offsets[a + p] = numpy.zeros(self.nb_joints[a])
                 for j in range(self.nb_joints[a]):
-                    s = ((self.joint_limits[a + '-maximum'][j] - self.joint_limits[a + '-minimum'][j])
-                         / (self.all_voltages[a + '-' + p].maximum[j] - self.all_voltages[a + '-' + p].minimum[j]))
-                    print(f'{a}-{p}[{j}] = {s}')
+                    j_min = self.joint_limits[a + '-minimum'][j]
+                    j_max = self.joint_limits[a + '-maximum'][j]
+                    v_min = self.all_voltages[a + '-' + p].minimum[j]
+                    v_max = self.all_voltages[a + '-' + p].maximum[j]
+                    if self.pot_directions[a][j] > 0:
+                        s = ((j_max - j_min) / (v_max - v_min))
+                        o = j_min - (s * v_min)
+                    else:
+                        s = ((j_min - j_max) / (v_max - v_min))
+                        o = j_max - (s * v_min)
+                    self.all_scales[a + p][j] = s
+                    self.all_offsets[a + p][j] = o
+                print(f'"{p}-offsets": {self.all_offsets[a + p].tolist()},')
+                print(f'"{p}-scales": {self.all_scales[a + p].tolist()},')
+
+    def quit_cb(self):
+        msg = QMessageBox()
+        msg.setText("Quit?")
+        msg.setWindowTitle("dvrk_calibrate_suj quit")
+        msg.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
+        result = msg.exec()
+        if result == QMessageBox.Ok:
+            self.ral.shutdown()
+            self.app.quit()
+
+    def closeEvent(self, event):
+        self.ral.shutdown()
 
 
 # GUI
 app = QApplication([])
-widget = main_widget()
+widget = main_widget(app)
 widget.show()
 
 app.exec()
 widget.timer.stop()
-
-ral.shutdown()
